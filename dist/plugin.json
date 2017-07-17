@@ -1,0 +1,36 @@
+{
+  "type": "panel",
+  "name": "BBA-Plotly",
+  "id": "bba-plotly-panel",
+
+  "info": {
+    "description": "Plotly panel for grafana",
+    "author": {
+      "name": "BBA"
+    },
+    "keywords": [ "plotly", "scatter", "panel" ],
+    "logos": {
+      "small": "img/plotly_logo.svg",
+      "large": "img/plotly_logo.svg"
+    },
+    "links": [
+      {"name": "Plot.ly", "url": "https://plot.ly/javascript/"},
+      {"name": "Github", "url": "https://github.com/NatelEnergy/grafana-plotly-panel"},
+      {"name": "MIT License",  "url": "https://github.com/NatelEnergy/grafana-plotly-panel/blob/master/LICENSE"},
+      {"name": "BBA", "url": "http://www.BBA.ca/"}
+    ],
+    "screenshots": [
+      { "name": "Scatter",     "path": "img/screenshot-scatter.png"    },
+      { "name": "Scatter 2D",  "path": "img/screenshot-scatter-1.png"  },
+      { "name": "Scatter 3D",  "path": "img/screenshot-scatter-3d.png" },
+      { "name": "Options",     "path": "img/screenshot-options.png"    }
+    ],
+    "version": "0.0.3",
+    "updated": "2016-04-17"
+  },
+
+  "dependencies": {
+    "grafanaVersion": "3.x.x",
+    "plugins": [ ]
+  }
+}
