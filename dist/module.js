@@ -152,8 +152,7 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
               },
               scene: {
                 xaxis: { title: 'X AXIS' },
-                yaxis: { title: 'Y AXIS' },
-                zaxis: { title: 'Z AXIS' }
+                yaxis: { title: 'Y AXIS' }
               }
             }
           };
@@ -163,6 +162,7 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
 
           var cfg = _this.panel.pconfig;
           _this.trace = {};
+          _this.trace2 = {};
           _this.layout = $.extend(true, {}, _this.panel.pconfig.layout);
 
           _this.events.on('init-edit-mode', _this.onInitEditMode.bind(_this));
@@ -215,10 +215,6 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                 if (name) {
                   cfg.mapping.y = name;
                 }return cfg.mapping.y;
-              } }, { disp: 'Z Axis', idx: 3, config: cfg.layout.yaxis, metric: function metric(name) {
-                if (name) {
-                  cfg.mapping.z = name;
-                }return cfg.mapping.z;
               } }];
           }
         }, {
@@ -257,7 +253,7 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                 modeBarButtonsToRemove: ['sendDataToCloud'] //, 'select2d', 'lasso2d']
               };
 
-              var data = [this.trace];
+              var data = [this.trace, this.trace2];
               var rect = this.graph.getBoundingClientRect();
 
               var old = this.layout;
@@ -350,23 +346,29 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
         }, {
           key: 'onDataReceived',
           value: function onDataReceived(dataList) {
+            //trace objects are passed to the data array of the plotly call
             this.trace.x = [];
             this.trace.y = [];
-            this.trace.z = [];
+            this.trace2.x = [];
+            this.trace2.y = [];
 
             this.data = {};
-            if (dataList.length < 2) {
+            if (dataList.length < 4) {
               console.log("No data", dataList);
             } else {
               var dmapping = {
                 x: null,
-                y: null,
-                z: null
+                y: null
+              };
+              var dmapping2 = {
+                x: null,
+                y: null
               };
 
               //   console.log( "plotly data", dataList);
               var cfg = this.panel.pconfig;
               var mapping = cfg.mapping;
+              var mapping2 = cfg.mapping;
               var key = {
                 name: "@time",
                 type: 'ms',
@@ -381,11 +383,15 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                 idx: -1,
                 points: []
               };
+
               this.data[key.name] = key;
               this.data[idx.name] = idx;
+
+              //itere dans les datalists (les series configure dans grafana)
               for (var i = 0; i < dataList.length; i++) {
                 var datapoints = dataList[i].datapoints;
                 if (datapoints.length > 0) {
+
                   var val = {
                     name: dataList[i].target,
                     type: 'number',
@@ -393,6 +399,7 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                     idx: i,
                     points: []
                   };
+
                   if (_.isString(datapoints[0][0])) {
                     val.type = 'string';
                   } else if (_.isBoolean(datapoints[0][0])) {
@@ -405,10 +412,14 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                   } else if (i == 1) {
                     dmapping.y = val.name;
                   } else if (i == 2) {
-                    dmapping.z = val.name;
+                    dmapping2.x = val.name;
+                  } else if (i == 3) {
+                    dmapping2.y = val.name;
                   }
 
                   this.data[val.name] = val;
+
+                  //Itere dans les datapoints (valeurs) de la datalist (serie) courante 
                   if (key.points.length == 0) {
                     for (var j = 0; j < datapoints.length; j++) {
                       key.points.push(datapoints[j][1]);
@@ -427,19 +438,22 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                         val.missing = val.missing + 1;
                       }
                     }
-                  }
+                  } //Itere dans les datapoints (valeurs) de la datalist (serie) courante 
                 }
-              }
+              } //itere dans les datalists (les series configure dans grafana)
 
               // Maybe overwrite?
               if (!mapping.x) mapping.x = dmapping.x;
               if (!mapping.y) mapping.y = dmapping.y;
-              if (!mapping.z) mapping.z = dmapping.z;
+              if (!mapping2.x) mapping2.x = dmapping2.x;
+              if (!mapping2.y) mapping2.y = dmapping2.y;
 
               // console.log( "GOT", this.data, mapping );
 
               var dX = this.data[mapping.x];
               var dY = this.data[mapping.y];
+              var dX2 = this.data[mapping2.x];
+              var dY2 = this.data[mapping2.y];
               var dZ = null;
               var dC = null;
               var dS = null;
@@ -451,29 +465,27 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
               if (!dY) {
                 throw { message: "Unable to find Y: " + mapping.y };
               }
+              if (!dX2) {
+                throw { message: "Unable to find X2: " + mapping2.x };
+              }
+              if (!dY2) {
+                throw { message: "Unable to find Y2: " + mapping2.y };
+              }
 
               this.trace.ts = key.points;
               this.trace.x = dX.points;
               this.trace.y = dY.points;
 
-              if (cfg.settings.type == 'scatter3d') {
-                dZ = this.data[mapping.z];
-                if (!dZ) {
-                  throw { message: "Unable to find Z: " + mapping.z };
-                }
-                this.layout.scene.xaxis.title = dX.name;
-                this.layout.scene.yaxis.title = dY.name;
-                this.layout.scene.zaxis.title = dZ.name;
-
-                this.trace.z = dZ.points;
-                console.log("3D", this.layout);
-              } else {
-                this.layout.xaxis.title = dX.name;
-                this.layout.yaxis.title = dY.name;
-              }
-
               this.trace.marker = $.extend(true, {}, cfg.settings.marker);
               this.trace.line = $.extend(true, {}, cfg.settings.line);
+
+              this.trace2.ts = key.points;
+              this.trace2.x = dX2.points;
+              this.trace2.y = dY2.points;
+
+              this.layout.xaxis.title = dX.name;
+              this.layout.yaxis.title = dY.name;
+
 
               if (mapping.size) {
                 dS = this.data[mapping.size];
@@ -481,6 +493,7 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                   throw { message: "Unable to find Size: " + mapping.size };
                 }
                 this.trace.marker.size = dS.points;
+                this.trace2.marker.size = dS.points;                
               }
 
               // Set the marker colors
@@ -493,9 +506,11 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
                   throw { message: "Unable to find Color: " + mapping.color };
                 }
                 this.trace.marker.color = dC.points;
+                this.trace2.marker.color = dC.points;                
               }
 
               console.log("TRACE", this.trace);
+              console.log("TRACE2", this.trace2);
             }
             this.render();
           }
@@ -512,6 +527,8 @@ System.register(['app/plugins/sdk', 'lodash', 'moment', 'angular', './external/p
             var cfg = this.panel.pconfig;
             this.trace.type = cfg.settings.type;
             this.trace.mode = cfg.settings.mode;
+            this.trace2.type = cfg.settings.type;
+            this.trace2.mode = cfg.settings.mode;
 
             var axis = [this.panel.pconfig.layout.xaxis, this.panel.pconfig.layout.yaxis];
             for (var i = 0; i < axis.length; i++) {
